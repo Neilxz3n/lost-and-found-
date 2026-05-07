@@ -1,0 +1,1 @@
+node_modules/\nuploads/*\n!uploads/.gitkeep\n.env\ndist/

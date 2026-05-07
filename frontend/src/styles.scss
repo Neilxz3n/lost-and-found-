@@ -1,0 +1,22 @@
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+}
+
+$theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$violet-palette,
+    tertiary: mat.$cyan-palette,
+  ),
+));
+
+html {
+  @include mat.all-component-themes($theme);
+}
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+* { box-sizing: border-box; }
