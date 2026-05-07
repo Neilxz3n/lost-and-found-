@@ -1,16 +1,14 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { BehaviorSubject, Observable, of, throwError, delay } from 'rxjs';
 import { User, LoginResponse } from '../models/interfaces';
+import { MOCK_USERS } from './mock-data';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl = environment.apiUrl;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor() {
     const stored = localStorage.getItem('user');
     if (stored) {
       this.currentUserSubject.next(JSON.parse(stored));
@@ -18,17 +16,33 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, { email, password }).pipe(
-      tap(response => {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        this.currentUserSubject.next(response.user);
-      })
-    );
+    const user = MOCK_USERS.find(u => u.email === email);
+    if (user && password === 'password123') {
+      const response: LoginResponse = {
+        message: 'Login successful.',
+        token: 'mock-jwt-token-' + user.id,
+        user
+      };
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      this.currentUserSubject.next(response.user);
+      return of(response).pipe(delay(300));
+    }
+    return throwError(() => ({ error: { message: 'Invalid email or password.' } }));
   }
 
   register(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, data);
+    const newUser: User = {
+      id: MOCK_USERS.length + 1,
+      full_name: data.full_name,
+      email: data.email,
+      role: 'user',
+      course: data.course,
+      year_level: data.year_level,
+      contact_number: data.contact_number
+    };
+    MOCK_USERS.push(newUser);
+    return of({ message: 'Registration successful.', userId: newUser.id }).pipe(delay(300));
   }
 
   logout(): void {
@@ -55,10 +69,20 @@ export class AuthService {
   }
 
   getProfile(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/profile`);
+    const user = this.currentUserSubject.value;
+    if (user) {
+      return of(user).pipe(delay(100));
+    }
+    return throwError(() => ({ error: { message: 'Not logged in.' } }));
   }
 
   updateProfile(data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/profile`, data);
+    const user = this.currentUserSubject.value;
+    if (user) {
+      Object.assign(user, data);
+      localStorage.setItem('user', JSON.stringify(user));
+      this.currentUserSubject.next(user);
+    }
+    return of({ message: 'Profile updated successfully.' }).pipe(delay(300));
   }
 }
